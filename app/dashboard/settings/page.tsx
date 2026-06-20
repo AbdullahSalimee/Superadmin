@@ -8,108 +8,108 @@ export default function SettingsPage() {
   const save = (label: string) => { setToast(`${label} saved`); setTimeout(() => setToast(""), 2200); };
 
   const sections = [
-    { icon: ShieldCheck, title: 'Super Admin Credentials', desc: 'Change the platform master password', color: 'var(--blu)' },
-    { icon: Bell, title: 'Notifications', desc: 'Platform-level alert preferences', color: 'var(--vio)' },
-    { icon: Database, title: 'Data Retention', desc: 'Soft-delete cleanup policy', color: 'var(--amb)' },
-    { icon: SlidersHorizontal, title: 'Platform Defaults', desc: 'Defaults applied to new academies', color: 'var(--grn)' },
+    { icon: ShieldCheck, title: 'super_admin_credentials', desc: 'change the platform master password', color: 'var(--acc)' },
+    { icon: Bell, title: 'notifications', desc: 'platform-level alert preferences', color: 'var(--vio)' },
+    { icon: Database, title: 'data_retention', desc: 'soft-delete cleanup policy', color: 'var(--amb)' },
+    { icon: SlidersHorizontal, title: 'platform_defaults', desc: 'defaults applied to new academies', color: 'var(--cyn)' },
   ];
 
   return (
-    <div style={{ padding: '28px 28px 40px' }}>
+    <div style={{ padding: '24px 24px 40px' }}>
       {toast && (
-        <div style={{
-          position: 'fixed', top: 20, right: 24, zIndex: 200,
-          background: 'var(--card)', border: '1px solid var(--line-md)', borderRadius: 10,
-          padding: '11px 16px', display: 'flex', alignItems: 'center', gap: 9,
-          boxShadow: '0 16px 40px rgba(0,0,0,0.4)', animation: 'slideUp 0.2s ease',
-          fontSize: 13, fontWeight: 600, color: 'var(--t1)',
+        <div className="mono" style={{
+          position: 'fixed', top: 18, right: 22, zIndex: 200,
+          background: 'var(--card)', border: '1px solid var(--line-md)', borderRadius: 'var(--r-md)',
+          padding: '10px 15px', display: 'flex', alignItems: 'center', gap: 9,
+          boxShadow: '0 16px 40px rgba(0,0,0,0.5)', animation: 'slideUp 0.18s ease',
+          fontSize: 12, fontWeight: 600, color: 'var(--t1)',
         }}>
-          <Check size={14} color="var(--grn)" /> {toast}
+          <Check size={13} color="var(--acc)" /> {toast}
         </div>
       )}
 
-      <div className="anim-up" style={{ marginBottom: 28 }}>
-        <div className="label" style={{ marginBottom: 6 }}>Platform</div>
+      <div className="anim-up" style={{ marginBottom: 24 }}>
+        <div className="label" style={{ marginBottom: 6 }}>platform / settings</div>
         <h1 className="display">Settings</h1>
-        <p className="body" style={{ marginTop: 5 }}>Platform-level configuration and preferences</p>
+        <p className="body mono" style={{ marginTop: 5, fontSize: 12 }}>platform-level configuration and preferences</p>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 620 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 620 }}>
         {sections.map((s, i) => (
-          <div key={s.title} className={`card anim-up d${i+1}`} style={{ padding: 22 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 13, marginBottom: 18 }}>
-              <div style={{ width: 38, height: 38, borderRadius: 11, background: `${s.color}14`, border: `1px solid ${s.color}22`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <s.icon size={17} color={s.color} />
+          <div key={s.title} className={`card anim-up d${i+1}`} style={{ padding: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+              <div style={{ width: 34, height: 34, borderRadius: 'var(--r-sm)', background: `${s.color}14`, border: `1px solid ${s.color}33`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <s.icon size={15} color={s.color} />
               </div>
               <div>
                 <div className="title">{s.title}</div>
-                <div className="body" style={{ fontSize: 12, marginTop: 1 }}>{s.desc}</div>
+                <div className="body" style={{ fontSize: 11.5, marginTop: 1 }}>{s.desc}</div>
               </div>
             </div>
-            <div style={{ height: 1, background: 'var(--line)', marginBottom: 16 }} />
+            <div style={{ height: 1, background: 'var(--line)', marginBottom: 15 }} />
 
-            {s.title === 'Super Admin Credentials' && (
+            {s.title === 'super_admin_credentials' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <div>
-                  <label className="label" style={{ display: 'block', marginBottom: 6 }}>New Password</label>
+                  <label className="label" style={{ display: 'block', marginBottom: 6 }}>new_password</label>
                   <div style={{ position: 'relative' }}>
-                    <input className="input" type={showPw ? 'text' : 'password'} placeholder="Enter new master password" style={{ paddingRight: 38 }} />
+                    <input className="input" type={showPw ? 'text' : 'password'} placeholder="enter new master password" style={{ paddingRight: 36 }} />
                     <button onClick={() => setShowPw(v=>!v)} style={{ position:'absolute',right:10,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',color:'var(--t3)',display:'flex' }}>
-                      {showPw ? <EyeOff size={13}/> : <Eye size={13}/>}
+                      {showPw ? <EyeOff size={12}/> : <Eye size={12}/>}
                     </button>
                   </div>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                  <button className="btn btn-primary btn-sm" onClick={() => save('Password')}><Save size={12} /> Update Password</button>
+                  <button className="btn btn-primary btn-sm" onClick={() => save('password')}><Save size={11} /> update password</button>
                 </div>
               </div>
             )}
 
-            {s.title === 'Notifications' && (
+            {s.title === 'notifications' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <div>
-                  <label className="label" style={{ display: 'block', marginBottom: 6 }}>Alert Email</label>
+                  <label className="label" style={{ display: 'block', marginBottom: 6 }}>alert_email</label>
                   <input className="input" placeholder="admin@platform.io" />
                 </div>
-                {['New academy signups', 'Overdue fee alerts', 'Suspended academy reminders'].map(opt => (
-                  <label key={opt} style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 13, color: 'var(--t2)', cursor: 'pointer' }}>
-                    <input type="checkbox" defaultChecked style={{ accentColor: 'var(--blu)', width: 14, height: 14 }} />
+                {['new academy signups', 'overdue fee alerts', 'suspended academy reminders'].map(opt => (
+                  <label key={opt} className="mono" style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 12, color: 'var(--t2)', cursor: 'pointer' }}>
+                    <input type="checkbox" defaultChecked style={{ accentColor: 'var(--acc)', width: 14, height: 14 }} />
                     {opt}
                   </label>
                 ))}
                 <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                  <button className="btn btn-primary btn-sm" onClick={() => save('Notification settings')}><Save size={12} /> Save</button>
+                  <button className="btn btn-primary btn-sm" onClick={() => save('notification settings')}><Save size={11} /> save</button>
                 </div>
               </div>
             )}
 
-            {s.title === 'Data Retention' && (
+            {s.title === 'data_retention' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <div>
-                  <label className="label" style={{ display: 'block', marginBottom: 6 }}>Soft-Delete Retention (days)</label>
+                  <label className="label" style={{ display: 'block', marginBottom: 6 }}>soft_delete_retention_days</label>
                   <input className="input" type="number" defaultValue={90} />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                  <button className="btn btn-primary btn-sm" onClick={() => save('Retention policy')}><Save size={12} /> Save</button>
+                  <button className="btn btn-primary btn-sm" onClick={() => save('retention policy')}><Save size={11} /> save</button>
                 </div>
               </div>
             )}
 
-            {s.title === 'Platform Defaults' && (
+            {s.title === 'platform_defaults' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <div>
-                  <label className="label" style={{ display: 'block', marginBottom: 6 }}>Default Status for New Academies</label>
+                  <label className="label" style={{ display: 'block', marginBottom: 6 }}>default_status_new_academies</label>
                   <select className="input" defaultValue="active">
-                    <option value="active">Active</option>
-                    <option value="trial">Trial</option>
+                    <option value="active">active</option>
+                    <option value="trial">trial</option>
                   </select>
                 </div>
                 <div>
-                  <label className="label" style={{ display: 'block', marginBottom: 6 }}>Trial Period Length (days)</label>
+                  <label className="label" style={{ display: 'block', marginBottom: 6 }}>trial_period_days</label>
                   <input className="input" type="number" defaultValue={30} />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                  <button className="btn btn-primary btn-sm" onClick={() => save('Platform defaults')}><Save size={12} /> Save</button>
+                  <button className="btn btn-primary btn-sm" onClick={() => save('platform defaults')}><Save size={11} /> save</button>
                 </div>
               </div>
             )}
