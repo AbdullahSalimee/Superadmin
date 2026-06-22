@@ -1,253 +1,411 @@
-// ════════════════════════════════════════════════════════════════
-// Dummy data — shaped to match the live Supabase/Postgres schema
-// (see project `supabase` schema dump). Field names, types, and
-// relations mirror the real tables 1:1 so this swaps for live
-// queries with no UI changes.
-// ════════════════════════════════════════════════════════════════
+import type {
+  Academy,
+  AcademyDataset,
+  AcademyMetrics,
+  AcademyStatus,
+  AppNotification,
+  AttendanceRecord,
+  AttendanceStatus,
+  FeeRecord,
+  SchoolClass,
+  Student,
+  Subject,
+  Test,
+  TestResult,
+} from "@/types";
 
-export type AcademyStatus = 'active' | 'trial' | 'suspended';
-export type StaffRole = 'admin' | 'teacher';
-
-// ─── academies ─────────────────────────────────────────────────
-export interface Academy {
-  id: string;               // uuid
-  name: string;
-  logo_url: string | null;
-  logo_updated_at: string | null;
-  created_at: string;       // timestamptz
-  // platform-only fields (SA addendum SA.6.1, not in base schema yet)
-  status: AcademyStatus;
-  contact_name: string | null;
-  contact_phone: string | null;
-  city: string;
-  updated_at: string;
+// ---- deterministic pseudo-random (seeded) so the dataset is stable across renders ----
+function mulberry32(seed: number) {
+  return function () {
+    seed |= 0;
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
 }
 
-// ─── academy_roles — one row per (academy_id, role), holds the
-// shared password_hash for that role at that academy ───────────
-export interface AcademyRole {
-  id: string;          // uuid
-  academy_id: string;  // fk -> academies.id
-  role: StaffRole;
-  password_hash: string;
-  created_at: string;
-}
-
-// ─── session_logs — login activity per academy/role ────────────
-export interface SessionLog {
-  id: string;
-  academy_id: string;
-  role: StaffRole | 'super_admin';
-  ip_address: string | null;
-  logged_in_at: string;
-  is_active: boolean;
-}
-
-// ─── classes ─────────────────────────────────────────────────
-export interface ClassRow {
-  id: string;
-  academy_id: string;
-  name: string;
-  section: string | null;
-  created_at: string;
-}
-
-// ─── subjects ────────────────────────────────────────────────
-export interface SubjectRow {
-  id: string;
-  academy_id: string;
-  name: string;
-  created_at: string;
-}
-
-// ─── students (counts only, aggregated per academy for this console) ─
-export interface StudentAgg {
-  academy_id: string;
-  active_count: number;
-  inactive_count: number;
-}
-
-// ─── fee_records (aggregated current-month rollup per academy) ─
-export interface FeeAgg {
-  academy_id: string;
-  month: number;
-  year: number;
-  collected: number;   // sum(amount_due) where status='paid'
-  due: number;          // sum(amount_due) where status='unpaid'
-}
-
-export const PALETTES = [
-  ['#00E599', '#00A36C'],
-  ['#8B8FFF', '#5B5FD9'],
-  ['#3DC4E8', '#1E8FB3'],
-  ['#E8A33D', '#B97A1F'],
-  ['#F2495C', '#C12E40'],
-  ['#C9A8FF', '#9A6FE0'],
-];
-
-export const SA_PASSWORD = 'superadmin123';
-
-// current operating month for "this month" rollups, kept in sync
-// with system date the way the real fee-rollover job would resolve it
-export const CURRENT_MONTH = 6;  // June
-export const CURRENT_YEAR = 2026;
-
-// ─── academies ─────────────────────────────────────────────────
-export const ACADEMIES: Academy[] = [
-  {
-    id: 'a1f3c9e2-4b8d-4a1c-9e2f-1d6c8b3a7f01',
-    name: 'Scholars Hub', logo_url: null, logo_updated_at: null,
-    created_at: '2023-08-10T06:12:00Z', status: 'active',
-    contact_name: 'Fatima Malik', contact_phone: '0321-1122334',
-    city: 'Lahore', updated_at: '2026-05-02T11:04:00Z',
-  },
-  {
-    id: 'b27e4d81-9c3a-4f6e-8b1d-2a9f7c5e4b02',
-    name: 'Superior Academy', logo_url: null, logo_updated_at: null,
-    created_at: '2024-01-15T09:30:00Z', status: 'active',
-    contact_name: 'Dr. Imran Khan', contact_phone: '0300-1234567',
-    city: 'Karachi', updated_at: '2026-06-11T14:22:00Z',
-  },
-  {
-    id: 'c3a85f72-1d4e-4c9b-a3f8-5e2b9d6c1f03',
-    name: 'Pinnacle Institute', logo_url: null, logo_updated_at: null,
-    created_at: '2024-06-01T07:45:00Z', status: 'active',
-    contact_name: 'Sana Baig', contact_phone: '0301-5544332',
-    city: 'Islamabad', updated_at: '2026-04-28T08:50:00Z',
-  },
-  {
-    id: 'd49f6a13-8e2c-4b7d-9f1a-6c3d8e5f2a04',
-    name: 'Beacon Institute', logo_url: null, logo_updated_at: null,
-    created_at: '2024-03-02T10:15:00Z', status: 'active',
-    contact_name: 'Maryam Siddiqui', contact_phone: '0312-9876543',
-    city: 'Lahore', updated_at: '2026-05-19T16:08:00Z',
-  },
-  {
-    id: 'e5b07c24-3f9d-4a8e-b2c6-7d4e9f0a3b05',
-    name: 'Horizon Academy', logo_url: null, logo_updated_at: null,
-    created_at: '2025-05-20T12:00:00Z', status: 'trial',
-    contact_name: 'Ahmed Raza', contact_phone: '0333-4567890',
-    city: 'Peshawar', updated_at: '2026-06-01T09:00:00Z',
-  },
-  {
-    id: 'f6c18d35-4a0e-4b9f-c3d7-8e5f0a1b4c06',
-    name: 'Roots Academy', logo_url: null, logo_updated_at: null,
-    created_at: '2023-11-22T05:40:00Z', status: 'suspended',
-    contact_name: 'Tariq Hussain', contact_phone: '0345-9988776',
-    city: 'Faisalabad', updated_at: '2026-03-14T13:30:00Z',
-  },
-];
-
-// ─── academy_roles — 2 rows per academy (admin + teacher) ─────
-export const ACADEMY_ROLES: AcademyRole[] = ACADEMIES.flatMap((a, i) => ([
-  { id: `role-${a.id}-admin`, academy_id: a.id, role: 'admin' as const,
-    password_hash: `$2b$10$${'a'.repeat(6)}${i}hashStub.fixedSaltDemo`,
-    created_at: a.created_at },
-  { id: `role-${a.id}-teacher`, academy_id: a.id, role: 'teacher' as const,
-    password_hash: `$2b$10$${'t'.repeat(6)}${i}hashStub.fixedSaltDemo`,
-    created_at: a.created_at },
-]));
-
-// ─── classes — a handful per academy ───────────────────────────
-const CLASS_NAMES: [string, string | null][] = [
-  ['9th', 'blue'], ['9th', 'red'], ['10th', 'blue'], ['10th', 'red'],
-  ['Grade 5', 'A'], ['Grade 6', 'B'], ['O-Level', null], ['A-Level', null],
-];
-export const CLASSES: ClassRow[] = ACADEMIES.flatMap((a, ai) =>
-  CLASS_NAMES.slice(0, 4 + (ai % 3)).map(([name, section], ci) => ({
-    id: `class-${a.id}-${ci}`,
-    academy_id: a.id,
-    name, section,
-    created_at: a.created_at,
-  }))
-);
-
-// ─── subjects — global per academy ─────────────────────────────
-const SUBJECT_NAMES = ['Mathematics', 'Physics', 'Chemistry', 'Biology', 'English', 'Urdu', 'Computer Science'];
-export const SUBJECTS: SubjectRow[] = ACADEMIES.flatMap((a) =>
-  SUBJECT_NAMES.map((name, si) => ({
-    id: `subj-${a.id}-${si}`,
-    academy_id: a.id,
-    name,
-    created_at: a.created_at,
-  }))
-);
-
-// ─── student aggregates (per-academy counts) ───────────────────
-export const STUDENT_AGGS: Record<string, StudentAgg> = {
-  [ACADEMIES[0].id]: { academy_id: ACADEMIES[0].id, active_count: 420, inactive_count: 18 },
-  [ACADEMIES[1].id]: { academy_id: ACADEMIES[1].id, active_count: 312, inactive_count: 9 },
-  [ACADEMIES[2].id]: { academy_id: ACADEMIES[2].id, active_count: 256, inactive_count: 11 },
-  [ACADEMIES[3].id]: { academy_id: ACADEMIES[3].id, active_count: 198, inactive_count: 6 },
-  [ACADEMIES[4].id]: { academy_id: ACADEMIES[4].id, active_count: 54, inactive_count: 1 },
-  [ACADEMIES[5].id]: { academy_id: ACADEMIES[5].id, active_count: 87, inactive_count: 14 },
-};
-
-// ─── fee aggregates (this month, per academy) ──────────────────
-export const FEE_AGGS: Record<string, FeeAgg> = {
-  [ACADEMIES[0].id]: { academy_id: ACADEMIES[0].id, month: CURRENT_MONTH, year: CURRENT_YEAR, collected: 1890000, due: 60000 },
-  [ACADEMIES[1].id]: { academy_id: ACADEMIES[1].id, month: CURRENT_MONTH, year: CURRENT_YEAR, collected: 1042087, due: 40333 },
-  [ACADEMIES[2].id]: { academy_id: ACADEMIES[2].id, month: CURRENT_MONTH, year: CURRENT_YEAR, collected: 896000, due: 32000 },
-  [ACADEMIES[3].id]: { academy_id: ACADEMIES[3].id, month: CURRENT_MONTH, year: CURRENT_YEAR, collected: 742000, due: 28000 },
-  [ACADEMIES[4].id]: { academy_id: ACADEMIES[4].id, month: CURRENT_MONTH, year: CURRENT_YEAR, collected: 0, due: 162000 },
-  [ACADEMIES[5].id]: { academy_id: ACADEMIES[5].id, month: CURRENT_MONTH, year: CURRENT_YEAR, collected: 0, due: 261000 },
-};
-
-// ─── session_logs — recent login activity across the platform ──
-export const SESSION_LOGS: SessionLog[] = [
-  { id: 'sl-01', academy_id: ACADEMIES[1].id, role: 'admin', ip_address: '203.124.45.12', logged_in_at: '2026-06-20T08:14:22Z', is_active: true },
-  { id: 'sl-02', academy_id: ACADEMIES[1].id, role: 'teacher', ip_address: '203.124.45.88', logged_in_at: '2026-06-20T07:52:09Z', is_active: true },
-  { id: 'sl-03', academy_id: ACADEMIES[0].id, role: 'admin', ip_address: '39.45.12.201', logged_in_at: '2026-06-20T06:30:41Z', is_active: false },
-  { id: 'sl-04', academy_id: ACADEMIES[2].id, role: 'teacher', ip_address: '182.180.9.44', logged_in_at: '2026-06-19T19:05:13Z', is_active: false },
-  { id: 'sl-05', academy_id: ACADEMIES[3].id, role: 'admin', ip_address: '111.119.182.6', logged_in_at: '2026-06-19T15:48:02Z', is_active: false },
-  { id: 'sl-06', academy_id: ACADEMIES[4].id, role: 'admin', ip_address: '101.50.66.130', logged_in_at: '2026-06-19T11:22:55Z', is_active: false },
-  { id: 'sl-07', academy_id: ACADEMIES[1].id, role: 'admin', ip_address: '203.124.45.12', logged_in_at: '2026-06-19T08:09:30Z', is_active: false },
-  { id: 'sl-08', academy_id: ACADEMIES[5].id, role: 'teacher', ip_address: '94.74.130.18', logged_in_at: '2026-06-12T10:00:00Z', is_active: false },
-];
-
-// ─── notifications — fee_not_set style alerts, platform view ───
-export interface NotificationRow {
-  id: string;
-  academy_id: string;
-  type: string;
-  student_id: string | null;
-  message: string;
-  is_resolved: boolean;
-  created_at: string;
-}
-export const NOTIFICATIONS: NotificationRow[] = [
-  { id: 'n1', academy_id: ACADEMIES[1].id, type: 'fee_not_set', student_id: 'stu-201', message: "New student 'Hassan Ali' added to 10th blue by Teacher — fee not set.", is_resolved: false, created_at: '2026-06-19T09:00:00Z' },
-  { id: 'n2', academy_id: ACADEMIES[0].id, type: 'fee_not_set', student_id: 'stu-088', message: "New student 'Areeba Noor' added to Grade 6 B by Teacher — fee not set.", is_resolved: false, created_at: '2026-06-18T13:20:00Z' },
-  { id: 'n3', academy_id: ACADEMIES[5].id, type: 'academy_suspended', student_id: null, message: 'Academy suspended — overdue platform license.', is_resolved: false, created_at: '2026-03-14T13:30:00Z' },
-];
-
-// ─── derived helpers (computed the way RLS-bypassed platform
-// queries would compute them — kept here so pages stay thin) ───
-export function studentsOf(academyId: string): StudentAgg {
-  return STUDENT_AGGS[academyId] ?? { academy_id: academyId, active_count: 0, inactive_count: 0 };
-}
-export function feesOf(academyId: string): FeeAgg {
-  return FEE_AGGS[academyId] ?? { academy_id: academyId, month: CURRENT_MONTH, year: CURRENT_YEAR, collected: 0, due: 0 };
-}
-export function rolesOf(academyId: string): AcademyRole[] {
-  return ACADEMY_ROLES.filter(r => r.academy_id === academyId);
-}
-export function classesOf(academyId: string): ClassRow[] {
-  return CLASSES.filter(c => c.academy_id === academyId);
-}
-export function staffCountOf(academyId: string): number {
-  // v1 schema is shared-credential (1 admin "seat" + 1 teacher "seat"
-  // per role row) — headcount here reflects distinct logged-in actors
-  // seen in session_logs for that academy, which is what's actually
-  // knowable from the schema as given.
-  const seen = new Set(SESSION_LOGS.filter(s => s.academy_id === academyId).map(s => s.ip_address));
-  return Math.max(seen.size, 1);
-}
-
-export const colorOf = (id: string) => {
+function hashSeed(str: string): number {
   let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
-  return PALETTES[h % PALETTES.length];
-};
+  for (let i = 0; i < str.length; i++) {
+    h = (h << 5) - h + str.charCodeAt(i);
+    h |= 0;
+  }
+  return h;
+}
 
-export const shortId = (id: string) => `${id.slice(0, 8)}…${id.slice(-4)}`;
+const FIRST_NAMES = [
+  "Ahmed", "Ali", "Bilal", "Hamza", "Usman", "Hassan", "Hussain", "Zain",
+  "Fatima", "Ayesha", "Sara", "Mariam", "Zainab", "Amna", "Hira", "Iqra",
+  "Abdullah", "Faizan", "Talha", "Saad", "Omar", "Rayyan", "Eman", "Noor",
+  "Areeba", "Laiba", "Maham", "Rida", "Shaheer", "Danish", "Asad", "Waqas",
+];
+const LAST_NAMES = [
+  "Khan", "Ahmed", "Malik", "Hussain", "Raza", "Sheikh", "Iqbal", "Farooq",
+  "Javed", "Akhtar", "Qureshi", "Butt", "Cheema", "Chaudhry", "Rizwan", "Saeed",
+];
+
+const CLASS_NAMES = ["Nursery", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th", "10th"];
+const SECTIONS = ["Blue", "Red", "Green", undefined, undefined]; // some classes have no section
+const SUBJECT_POOL = [
+  "Mathematics", "English", "Urdu", "Science", "Physics", "Chemistry",
+  "Biology", "Computer Science", "Islamiyat", "Social Studies", "Pakistan Studies",
+];
+
+const ACADEMIC_MONTHS = [5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3]; // May..March
+
+function pad(n: number) {
+  return String(n).length === 1 ? `0${n}` : String(n);
+}
+
+function isoDate(y: number, m: number, d: number) {
+  return `${y}-${pad(m)}-${pad(d)}`;
+}
+
+// "Today" for the dummy dataset — keeps fee rollover / dashboard math consistent
+export const TODAY = new Date("2026-06-20T00:00:00");
+export const CURRENT_MONTH = TODAY.getMonth() + 1; // 6
+export const CURRENT_YEAR = TODAY.getFullYear(); // 2026
+
+interface BuildOptions {
+  academyId: string;
+  academyName: string;
+  numClasses: number;
+  studentsPerClassRange: [number, number];
+}
+
+function buildAcademyDataset(opts: BuildOptions): AcademyDataset {
+  const rand = mulberry32(hashSeed(opts.academyId));
+  const pick = <T,>(arr: T[]): T => arr[Math.floor(rand() * arr.length)];
+  const int = (min: number, max: number) => min + Math.floor(rand() * (max - min + 1));
+
+  // ---- classes ----
+  const classes: SchoolClass[] = [];
+  const usedClassNames = new Set<string>();
+  let cIdx = 0;
+  while (classes.length < opts.numClasses) {
+    const name = CLASS_NAMES[cIdx % CLASS_NAMES.length];
+    const section = pick(SECTIONS);
+    const key = `${name}-${section ?? ""}`;
+    cIdx++;
+    if (usedClassNames.has(key)) continue;
+    usedClassNames.add(key);
+    classes.push({
+      id: `${opts.academyId}-class-${classes.length + 1}`,
+      academyId: opts.academyId,
+      name,
+      section: section ?? null,
+      createdAt: isoDate(2025, 1, 10 + classes.length),
+    });
+  }
+
+  // ---- subjects (global per academy) ----
+  const numSubjects = int(6, SUBJECT_POOL.length);
+  const subjectNames = [...SUBJECT_POOL].sort(() => rand() - 0.5).slice(0, numSubjects);
+  const subjects: Subject[] = subjectNames.map((name, i) => ({
+    id: `${opts.academyId}-subject-${i + 1}`,
+    academyId: opts.academyId,
+    name,
+    createdAt: isoDate(2025, 1, 11 + i),
+  }));
+
+  // ---- students ----
+  const students: Student[] = [];
+  let studentCounter = 0;
+  for (const cls of classes) {
+    const count = int(opts.studentsPerClassRange[0], opts.studentsPerClassRange[1]);
+    for (let roll = 1; roll <= count; roll++) {
+      studentCounter++;
+      const first = pick(FIRST_NAMES);
+      const last = pick(LAST_NAMES);
+      const status: Student["status"] = rand() < 0.06 ? "inactive" : "active";
+      const feeNotSet = rand() < 0.05;
+      const addedByRole: Student["addedByRole"] = feeNotSet ? "teacher" : "admin";
+      const admissionMonth = int(1, 12);
+      const admissionDay = int(1, 27);
+      const admissionYear = rand() < 0.7 ? 2025 : 2024;
+      students.push({
+        id: `${opts.academyId}-student-${studentCounter}`,
+        academyId: opts.academyId,
+        classId: cls.id,
+        rollNumber: roll,
+        name: `${first} ${last}`,
+        fatherName: `${pick(FIRST_NAMES)} ${last}`,
+        monthlyFee: feeNotSet ? null : int(1500, 6000),
+        admissionDate: isoDate(admissionYear, admissionMonth, admissionDay),
+        phone: `03${int(10, 49)}-${int(1000000, 9999999)}`,
+        address: `House ${int(1, 200)}, Street ${int(1, 40)}, ${["Lahore", "Kasur", "Multan", "Faisalabad"][int(0, 3)]}`,
+        teacherRemarks: rand() < 0.25 ? pick([
+          "Needs more practice in homework.",
+          "Excellent participation in class.",
+          "Improving steadily this term.",
+          "Should focus more during lectures.",
+          "Great progress since last term.",
+        ]) : null,
+        status,
+        addedByRole,
+      });
+    }
+  }
+
+  // ---- attendance (last ~70 days up to TODAY, per active student) ----
+  const attendance: AttendanceRecord[] = [];
+  let attCounter = 0;
+  const activeStudents = students.filter((s) => s.status === "active");
+  for (const student of activeStudents) {
+    const admission = new Date(student.admissionDate);
+    const start = admission > new Date("2026-04-01") ? admission : new Date("2026-04-01");
+    const days: Date[] = [];
+    const cursor = new Date(start);
+    while (cursor <= TODAY) {
+      const dow = cursor.getDay();
+      if (dow !== 0) days.push(new Date(cursor)); // skip Sundays
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    for (const day of days) {
+      const r = rand();
+      const status: AttendanceStatus = r < 0.84 ? "P" : r < 0.94 ? "A" : "L";
+      attCounter++;
+      attendance.push({
+        id: `${opts.academyId}-att-${attCounter}`,
+        academyId: opts.academyId,
+        studentId: student.id,
+        classId: student.classId,
+        date: isoDate(day.getFullYear(), day.getMonth() + 1, day.getDate()),
+        status,
+      });
+    }
+  }
+
+  // ---- fee records (academic year May..March, up to current month) ----
+  const feeRecords: FeeRecord[] = [];
+  let feeCounter = 0;
+  for (const student of students) {
+    if (student.monthlyFee === null) continue;
+    for (const month of ACADEMIC_MONTHS) {
+      const year = month >= 5 ? 2025 : 2026;
+      // skip months before admission
+      const admission = new Date(student.admissionDate);
+      const monthStart = new Date(year, month - 1, 1);
+      if (monthStart < new Date(admission.getFullYear(), admission.getMonth(), 1)) continue;
+      // skip months after "today"
+      if (year > CURRENT_YEAR || (year === CURRENT_YEAR && month > CURRENT_MONTH)) continue;
+      if (year === 2026 && month > CURRENT_MONTH) continue;
+
+      const isCurrentMonth = month === CURRENT_MONTH && year === CURRENT_YEAR;
+      const paid = isCurrentMonth ? rand() < 0.55 : rand() < 0.88;
+      feeCounter++;
+      feeRecords.push({
+        id: `${opts.academyId}-fee-${feeCounter}`,
+        academyId: opts.academyId,
+        studentId: student.id,
+        month,
+        year,
+        amountDue: student.monthlyFee,
+        status: paid ? "paid" : "unpaid",
+        paidDate: paid ? isoDate(year, month, int(1, 27)) : null,
+      });
+    }
+  }
+
+  // ---- tests + results ----
+  const tests: Test[] = [];
+  const testResults: TestResult[] = [];
+  let testCounter = 0;
+  let resultCounter = 0;
+  for (const cls of classes) {
+    const classStudents = students.filter((s) => s.classId === cls.id && s.status === "active");
+    if (classStudents.length === 0) continue;
+    const classSubjects = subjects.slice(0, int(3, Math.min(5, subjects.length)));
+    for (const subject of classSubjects) {
+      const numTests = int(2, 5);
+      for (let t = 1; t <= numTests; t++) {
+        testCounter++;
+        const totalMarks = pick([20, 25, 30, 50, 100]);
+        const testId = `${opts.academyId}-test-${testCounter}`;
+        tests.push({
+          id: testId,
+          academyId: opts.academyId,
+          classId: cls.id,
+          subjectId: subject.id,
+          name: `T${t}`,
+          date: isoDate(2026, int(1, CURRENT_MONTH), int(1, 27)),
+          totalMarks,
+        });
+        // not every test has marks fully entered — simulate partial entry on the latest test
+        const isLatest = t === numTests;
+        for (const student of classStudents) {
+          const enterMarks = !isLatest || rand() < 0.7;
+          if (!enterMarks) continue;
+          resultCounter++;
+          const isAbsent = rand() < 0.05;
+          testResults.push({
+            id: `${opts.academyId}-result-${resultCounter}`,
+            academyId: opts.academyId,
+            testId,
+            studentId: student.id,
+            marksObtained: isAbsent ? null : Math.round(totalMarks * (0.35 + rand() * 0.65)),
+            isAbsent,
+          });
+        }
+      }
+    }
+  }
+
+  // ---- notifications (fee_not_set) ----
+  const notifications: AppNotification[] = [];
+  let notifCounter = 0;
+  for (const student of students) {
+    if (student.monthlyFee === null && student.addedByRole === "teacher") {
+      notifCounter++;
+      const cls = classes.find((c) => c.id === student.classId);
+      notifications.push({
+        id: `${opts.academyId}-notif-${notifCounter}`,
+        academyId: opts.academyId,
+        type: "fee_not_set",
+        studentId: student.id,
+        message: `New student "${student.name}" added to ${cls?.name}${cls?.section ? ` (${cls.section})` : ""} by Teacher — fee not set.`,
+        isResolved: false,
+        createdAt: student.admissionDate,
+      });
+    }
+  }
+
+  return { classes, subjects, students, attendance, feeRecords, tests, testResults, notifications };
+}
+
+// ===== Academies (platform level) =====
+
+const ACADEMY_SEEDS: {
+  id: string;
+  name: string;
+  status: AcademyStatus;
+  createdAt: string;
+  contactName: string;
+  contactPhone: string;
+  numClasses: number;
+  studentsPerClassRange: [number, number];
+}[] = [
+  {
+    id: "superior-academy",
+    name: "Superior Academy",
+    status: "active",
+    createdAt: "2024-08-12",
+    contactName: "Imran Sheikh",
+    contactPhone: "0300-1234567",
+    numClasses: 8,
+    studentsPerClassRange: [18, 32],
+  },
+  {
+    id: "bright-future-school",
+    name: "Bright Future School",
+    status: "active",
+    createdAt: "2025-01-05",
+    contactName: "Sana Malik",
+    contactPhone: "0321-7654321",
+    numClasses: 6,
+    studentsPerClassRange: [12, 24],
+  },
+  {
+    id: "al-noor-academy",
+    name: "Al-Noor Academy",
+    status: "trial",
+    createdAt: "2026-04-02",
+    contactName: "Hamza Tariq",
+    contactPhone: "0333-9988776",
+    numClasses: 3,
+    studentsPerClassRange: [8, 15],
+  },
+  {
+    id: "city-grammar-school",
+    name: "City Grammar School",
+    status: "active",
+    createdAt: "2025-06-20",
+    contactName: "Ayesha Raza",
+    contactPhone: "0345-2233445",
+    numClasses: 9,
+    studentsPerClassRange: [20, 35],
+  },
+  {
+    id: "rising-stars-academy",
+    name: "Rising Stars Academy",
+    status: "suspended",
+    createdAt: "2024-11-30",
+    contactName: "Faisal Qureshi",
+    contactPhone: "0312-5566778",
+    numClasses: 5,
+    studentsPerClassRange: [10, 20],
+  },
+];
+
+export const ACADEMIES: Academy[] = ACADEMY_SEEDS.map((a) => ({
+  id: a.id,
+  name: a.name,
+  status: a.status,
+  contactName: a.contactName,
+  contactPhone: a.contactPhone,
+  createdAt: a.createdAt,
+  adminPassword: "admin123",
+  teacherPassword: "teacher123",
+}));
+
+const DATASET_CACHE = new Map<string, AcademyDataset>();
+
+export function getAcademyDataset(academyId: string): AcademyDataset {
+  if (DATASET_CACHE.has(academyId)) return DATASET_CACHE.get(academyId)!;
+  const seed = ACADEMY_SEEDS.find((a) => a.id === academyId);
+  if (!seed) {
+    const empty: AcademyDataset = {
+      classes: [], subjects: [], students: [], attendance: [],
+      feeRecords: [], tests: [], testResults: [], notifications: [],
+    };
+    return empty;
+  }
+  const dataset = buildAcademyDataset({
+    academyId: seed.id,
+    academyName: seed.name,
+    numClasses: seed.numClasses,
+    studentsPerClassRange: seed.studentsPerClassRange,
+  });
+  DATASET_CACHE.set(academyId, dataset);
+  return dataset;
+}
+
+export function getAcademy(academyId: string): Academy | undefined {
+  return ACADEMIES.find((a) => a.id === academyId);
+}
+
+export function getAcademyMetrics(academyId: string): AcademyMetrics {
+  const ds = getAcademyDataset(academyId);
+  const activeStudents = ds.students.filter((s) => s.status === "active").length;
+  const currentFees = ds.feeRecords.filter(
+    (f) => f.month === CURRENT_MONTH && f.year === CURRENT_YEAR
+  );
+  const revenueThisMonth = currentFees
+    .filter((f) => f.status === "paid")
+    .reduce<number>((sum, f) => sum + f.amountDue, 0);
+  const dueThisMonth = currentFees
+    .filter((f) => f.status === "unpaid")
+    .reduce<number>((sum, f) => sum + f.amountDue, 0);
+  return {
+    academyId,
+    activeStudents,
+    staffCount: 2, // shared admin + teacher password model (v1)
+    revenueThisMonth,
+    dueThisMonth,
+    totalClasses: ds.classes.length,
+    totalTests: ds.tests.length,
+  };
+}
+
+export function getPlatformTotals() {
+  const allMetrics = ACADEMIES.map((a) => getAcademyMetrics(a.id));
+  return {
+    totalAcademies: ACADEMIES.length,
+    activeAcademies: ACADEMIES.filter((a) => a.status === "active").length,
+    totalStudents: allMetrics.reduce((s, m) => s + m.activeStudents, 0),
+    totalStaff: allMetrics.reduce((s, m) => s + m.staffCount, 0),
+    platformRevenue: allMetrics.reduce((s, m) => s + m.revenueThisMonth, 0),
+    platformDue: allMetrics.reduce((s, m) => s + m.dueThisMonth, 0),
+  };
+}
