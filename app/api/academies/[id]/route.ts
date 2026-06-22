@@ -27,10 +27,17 @@ export async function PATCH(
   }
 
   // --- Update academy_roles table (passwords) ---
+  // AFTER
   if (body.adminPassword !== undefined) {
+    const { data: hash, error: hashErr } = await supabaseAdmin.rpc(
+      "hash_password",
+      { p_password: body.adminPassword },
+    );
+    if (hashErr)
+      return NextResponse.json({ error: hashErr.message }, { status: 500 });
     const { error } = await supabaseAdmin
       .from("academy_roles")
-      .update({ password_hash: body.adminPassword })
+      .update({ password_hash: hash })
       .eq("academy_id", id)
       .eq("role", "admin");
     if (error)
@@ -38,9 +45,15 @@ export async function PATCH(
   }
 
   if (body.teacherPassword !== undefined) {
+    const { data: hash, error: hashErr } = await supabaseAdmin.rpc(
+      "hash_password",
+      { p_password: body.teacherPassword },
+    );
+    if (hashErr)
+      return NextResponse.json({ error: hashErr.message }, { status: 500 });
     const { error } = await supabaseAdmin
       .from("academy_roles")
-      .update({ password_hash: body.teacherPassword })
+      .update({ password_hash: hash })
       .eq("academy_id", id)
       .eq("role", "teacher");
     if (error)

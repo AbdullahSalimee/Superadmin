@@ -35,8 +35,9 @@ export async function GET() {
       contactPhone: a.contact_phone ?? "",
       createdAt: a.created_at.slice(0, 10),
       // password_hash stored as plain text for now (no bcrypt in this v1 setup)
-      adminPassword: adminRole?.password_hash ?? "",
-      teacherPassword: teacherRole?.password_hash ?? "",
+      // AFTER
+      adminPassword: "", // bcrypt hash — never sent to client
+      teacherPassword: "", // bcrypt hash — never sent to client
     };
   });
 
@@ -77,9 +78,27 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: acErr.message }, { status: 500 });
 
   // 2. Insert admin + teacher roles
+  // AFTER
+  const { data: adminHash, error: hashErrA } = await supabaseAdmin.rpc(
+    "hash_password",
+    { p_password: adminPassword },
+  );
+  const { data: teacherHash, error: hashErrT } = await supabaseAdmin.rpc(
+    "hash_password",
+    { p_password: teacherPassword },
+  );
+
+  if (hashErrA || hashErrT) {
+    await supabaseAdmin.from("academies").delete().eq("id", academy.id);
+    return NextResponse.json(
+      { error: "Failed to hash passwords" },
+      { status: 500 },
+    );
+  }
+
   const { error: rolesErr } = await supabaseAdmin.from("academy_roles").insert([
-    { academy_id: academy.id, role: "admin", password_hash: adminPassword },
-    { academy_id: academy.id, role: "teacher", password_hash: teacherPassword },
+    { academy_id: academy.id, role: "admin", password_hash: adminHash },
+    { academy_id: academy.id, role: "teacher", password_hash: teacherHash },
   ]);
 
   if (rolesErr) {
@@ -88,14 +107,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: rolesErr.message }, { status: 500 });
   }
 
-  return NextResponse.json({
-    id: academy.id,
-    name: academy.name,
-    status: academy.status ?? "active",
-    contactName: academy.contact_name ?? "",
-    contactPhone: academy.contact_phone ?? "",
-    createdAt: academy.created_at.slice(0, 10),
-    adminPassword,
-    teacherPassword,
-  });
+ return NextResponse.json({
+   id: academy.id,
+   name: academy.name,
+   status: academy.status ?? "active",
+   contactName: academy.contact_name ?? "",
+   contactPhone: academy.contact_phone ?? "",
+   createdAt: academy.created_at.slice(0, 10),
+   adminPassword: "", // hashed — not returnable
+   teacherPassword: "",
+ });
 }
