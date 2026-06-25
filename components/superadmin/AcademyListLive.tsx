@@ -14,15 +14,6 @@ import {
   Building2,
 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
-import {
-  fetchAcademies,
-  createAcademy,
-  updateAcademy,
-  updateAcademyPasswords,
-  deleteAcademy,
-  fetchAcademyMetrics,
-} from "@/lib/api/academies";
-import type { Academy, AcademyMetrics, AcademyStatus } from "@/types";
 import { Button } from "@/components/ui/Button";
 import { Input, Select } from "@/components/ui/Input";
 import { KebabMenu } from "@/components/ui/KebabMenu";
@@ -38,13 +29,15 @@ import {
   updateAcademy,
   updateAcademyPasswords,
   deleteAcademy,
+  fetchAcademyMetrics,
 } from "@/lib/api/academies";
-import { formatDate, initials } from "@/lib/utils";
-import type { Academy, AcademyStatus } from "@/types";
+import { formatDate, formatPKR, initials } from "@/lib/utils";
+import type { Academy, AcademyMetrics, AcademyStatus } from "@/types";
 
 export function AcademyListLive({ title }: { title?: string }) {
   const router = useRouter();
   const [academies, setAcademies] = useState<Academy[]>([]);
+  const [metrics, setMetrics] = useState<Record<string, AcademyMetrics>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,33 +46,32 @@ export function AcademyListLive({ title }: { title?: string }) {
   const [statusFilter, setStatusFilter] = useState<AcademyStatus | "all">(
     "all",
   );
-
   const [editTarget, setEditTarget] = useState<Academy | null>(null);
   const [adminsTarget, setAdminsTarget] = useState<Academy | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Academy | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
-const [metrics, setMetrics] = useState<Record<string, AcademyMetrics>>({});
+
   const toast = (msg: string) => {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(null), 3000);
   };
 
-const load = async () => {
-  setLoading(true);
-  setError(null);
-  try {
-    const [data, metricsData] = await Promise.all([
-      fetchAcademies(),
-      fetchAcademyMetrics(),
-    ]);
-    setAcademies(data);
-    setMetrics(metricsData);
-  } catch (err) {
-    setError(err instanceof Error ? err.message : "Failed to load academies");
-  } finally {
-    setLoading(false);
-  }
-};
+  const load = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [data, metricsData] = await Promise.all([
+        fetchAcademies(),
+        fetchAcademyMetrics(),
+      ]);
+      setAcademies(data);
+      setMetrics(metricsData);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load academies");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     load();
@@ -134,9 +126,6 @@ const load = async () => {
     setSaving(true);
     try {
       await updateAcademyPasswords(adminsTarget.id, updates);
-      setAcademies((prev) =>
-        prev.map((a) => (a.id === adminsTarget.id ? { ...a, ...updates } : a)),
-      );
       toast("Passwords updated");
     } catch (err) {
       toast(err instanceof Error ? err.message : "Update failed");
