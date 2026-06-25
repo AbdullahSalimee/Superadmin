@@ -4,7 +4,7 @@ export async function fetchAcademies(): Promise<Academy[]> {
   const res = await fetch("/api/academies");
   if (!res.ok)
     throw new Error((await res.json()).error ?? "Failed to fetch academies");
-  return res.json();
+  return res.json() as Promise<Academy[]>;
 }
 
 export async function createAcademy(
@@ -17,12 +17,12 @@ export async function createAcademy(
   });
   if (!res.ok)
     throw new Error((await res.json()).error ?? "Failed to create academy");
-  return res.json();
+  return res.json() as Promise<Academy>;
 }
 
 export async function updateAcademy(
   id: string,
-  updates: Partial
+  updates: Partial<
     Pick<Academy, "name" | "status" | "contactName" | "contactPhone">
   >,
 ): Promise<void> {
@@ -54,9 +54,11 @@ export async function deleteAcademy(id: string): Promise<void> {
     throw new Error((await res.json()).error ?? "Failed to delete academy");
 }
 
-export async function fetchAcademyMetrics(): Promise<Record<string, AcademyMetrics>> {
+export async function fetchAcademyMetrics(): Promise<
+  Record<string, AcademyMetrics>
+> {
   const res = await fetch("/api/academies/metrics");
   if (!res.ok)
     throw new Error((await res.json()).error ?? "Failed to fetch metrics");
-  return res.json();
+  return res.json() as Promise<Record<string, AcademyMetrics>>;
 }
