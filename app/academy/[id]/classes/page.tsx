@@ -17,35 +17,63 @@ export default function ClassesSubjectsPage() {
   const [className, setClassName] = useState("");
   const [section, setSection] = useState("");
   const [subjectName, setSubjectName] = useState("");
-  const [deleteClassTarget, setDeleteClassTarget] = useState<SchoolClass | null>(null);
-  const [deleteSubjectTarget, setDeleteSubjectTarget] = useState<Subject | null>(null);
+  const [deleteClassTarget, setDeleteClassTarget] =
+    useState<SchoolClass | null>(null);
+  const [deleteSubjectTarget, setDeleteSubjectTarget] =
+    useState<Subject | null>(null);
+  const [savingClass, setSavingClass] = useState(false);
+  const [savingSubject, setSavingSubject] = useState(false);
 
-  const addClass = (e: React.FormEvent) => {
+  const addClass = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!className.trim()) return;
-    const newClass: SchoolClass = {
-      id: `${academy.id}-class-${Date.now()}`,
-      academyId: academy.id,
-      name: className.trim(),
-      section: section.trim() || null,
-      createdAt: new Date().toISOString().slice(0, 10),
-    };
-    setDataset((d) => ({ ...d, classes: [...d.classes, newClass] }));
-    setClassName("");
-    setSection("");
+    setSavingClass(true);
+    try {
+      const res = await fetch("/api/classes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          academyId: academy.id,
+          name: className.trim(),
+          section: section.trim() || null,
+        }),
+      });
+      if (!res.ok)
+        throw new Error((await res.json()).error ?? "Failed to add class");
+      const newClass: SchoolClass = await res.json();
+      setDataset((d) => ({ ...d, classes: [...d.classes, newClass] }));
+      setClassName("");
+      setSection("");
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to add class");
+    } finally {
+      setSavingClass(false);
+    }
   };
 
-  const addSubject = (e: React.FormEvent) => {
+  const addSubject = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!subjectName.trim()) return;
-    const newSubject: Subject = {
-      id: `${academy.id}-subject-${Date.now()}`,
-      academyId: academy.id,
-      name: subjectName.trim(),
-      createdAt: new Date().toISOString().slice(0, 10),
-    };
-    setDataset((d) => ({ ...d, subjects: [...d.subjects, newSubject] }));
-    setSubjectName("");
+    setSavingSubject(true);
+    try {
+      const res = await fetch("/api/subjects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          academyId: academy.id,
+          name: subjectName.trim(),
+        }),
+      });
+      if (!res.ok)
+        throw new Error((await res.json()).error ?? "Failed to add subject");
+      const newSubject: Subject = await res.json();
+      setDataset((d) => ({ ...d, subjects: [...d.subjects, newSubject] }));
+      setSubjectName("");
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to add subject");
+    } finally {
+      setSavingSubject(false);
+    }
   };
 
   const classHasRecords = (classId: string) =>
@@ -53,26 +81,65 @@ export default function ClassesSubjectsPage() {
     dataset.attendance.some((a) => a.classId === classId) ||
     dataset.tests.some((t) => t.classId === classId);
 
-  const confirmDeleteClass = () => {
+  const confirmDeleteClass = async () => {
     if (!deleteClassTarget) return;
-    setDataset((d) => ({ ...d, classes: d.classes.filter((c) => c.id !== deleteClassTarget.id) }));
-    setDeleteClassTarget(null);
+    try {
+      const res = await fetch("/api/classes", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: deleteClassTarget.id }),
+      });
+      if (!res.ok)
+        throw new Error((await res.json()).error ?? "Failed to delete class");
+      setDataset((d) => ({
+        ...d,
+        classes: d.classes.filter((c) => c.id !== deleteClassTarget.id),
+      }));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to delete class");
+    } finally {
+      setDeleteClassTarget(null);
+    }
   };
 
-  const confirmDeleteSubject = () => {
+  const confirmDeleteSubject = async () => {
     if (!deleteSubjectTarget) return;
-    setDataset((d) => ({ ...d, subjects: d.subjects.filter((s) => s.id !== deleteSubjectTarget.id) }));
-    setDeleteSubjectTarget(null);
+    try {
+      const res = await fetch("/api/subjects", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: deleteSubjectTarget.id }),
+      });
+      if (!res.ok)
+        throw new Error((await res.json()).error ?? "Failed to delete subject");
+      setDataset((d) => ({
+        ...d,
+        subjects: d.subjects.filter((s) => s.id !== deleteSubjectTarget.id),
+      }));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to delete subject");
+    } finally {
+      setDeleteSubjectTarget(null);
+    }
   };
 
   return (
     <div>
-      <AcademyPageHeader title="Classes & Subjects" subtitle="Feeds every dropdown elsewhere in the app" />
+      <AcademyPageHeader
+        title="Classes & Subjects"
+        subtitle="Feeds every dropdown elsewhere in the app"
+      />
 
       <div className="grid grid-cols-1 gap-5 px-4 py-6 sm:px-6 lg:grid-cols-2 lg:px-8">
         <Card>
-          <CardHeader title="Classes" subtitle={`${dataset.classes.length} classes`} />
-          <form onSubmit={addClass} className="flex flex-wrap items-end gap-2 px-5 pb-4">
+          <CardHeader
+            title="Classes"
+            subtitle={`${dataset.classes.length} classes`}
+          />
+          <form
+            onSubmit={addClass}
+            className="flex flex-wrap items-end gap-2 px-5 pb-4"
+          >
             <div className="flex-1 min-w-[120px]">
               <Input
                 placeholder="Class name (e.g. 10th)"
@@ -87,20 +154,34 @@ export default function ClassesSubjectsPage() {
                 onChange={(e) => setSection(e.target.value)}
               />
             </div>
-            <Button type="submit" variant="primary" size="md">
+            <Button
+              type="submit"
+              variant="primary"
+              size="md"
+              disabled={savingClass}
+            >
               <Plus className="h-3.5 w-3.5" />
             </Button>
           </form>
 
           {dataset.classes.length === 0 ? (
             <div className="px-5 pb-5">
-              <EmptyState icon={GraduationCap} title="No classes yet" description="Add your first class above." />
+              <EmptyState
+                icon={GraduationCap}
+                title="No classes yet"
+                description="Add your first class above."
+              />
             </div>
           ) : (
             <div className="divide-y divide-[var(--border)] border-t border-[var(--border)]">
               {dataset.classes.map((c) => (
-                <div key={c.id} className="flex items-center justify-between px-5 py-3">
-                  <span className="text-sm text-[var(--text)]">{classLabel(c.name, c.section)}</span>
+                <div
+                  key={c.id}
+                  className="flex items-center justify-between px-5 py-3"
+                >
+                  <span className="text-sm text-[var(--text)]">
+                    {classLabel(c.name, c.section)}
+                  </span>
                   <button
                     onClick={() => setDeleteClassTarget(c)}
                     className="text-[var(--text-faint)] hover:text-red-400 cursor-pointer"
@@ -114,8 +195,14 @@ export default function ClassesSubjectsPage() {
         </Card>
 
         <Card>
-          <CardHeader title="Subjects" subtitle={`${dataset.subjects.length} subjects · global across academy`} />
-          <form onSubmit={addSubject} className="flex items-end gap-2 px-5 pb-4">
+          <CardHeader
+            title="Subjects"
+            subtitle={`${dataset.subjects.length} subjects · global across academy`}
+          />
+          <form
+            onSubmit={addSubject}
+            className="flex items-end gap-2 px-5 pb-4"
+          >
             <div className="flex-1">
               <Input
                 placeholder="Subject name (e.g. Mathematics)"
@@ -123,19 +210,31 @@ export default function ClassesSubjectsPage() {
                 onChange={(e) => setSubjectName(e.target.value)}
               />
             </div>
-            <Button type="submit" variant="primary" size="md">
+            <Button
+              type="submit"
+              variant="primary"
+              size="md"
+              disabled={savingSubject}
+            >
               <Plus className="h-3.5 w-3.5" />
             </Button>
           </form>
 
           {dataset.subjects.length === 0 ? (
             <div className="px-5 pb-5">
-              <EmptyState icon={BookOpen} title="No subjects yet" description="Add your first subject above." />
+              <EmptyState
+                icon={BookOpen}
+                title="No subjects yet"
+                description="Add your first subject above."
+              />
             </div>
           ) : (
             <div className="divide-y divide-[var(--border)] border-t border-[var(--border)]">
               {dataset.subjects.map((s) => (
-                <div key={s.id} className="flex items-center justify-between px-5 py-3">
+                <div
+                  key={s.id}
+                  className="flex items-center justify-between px-5 py-3"
+                >
                   <span className="text-sm text-[var(--text)]">{s.name}</span>
                   <button
                     onClick={() => setDeleteSubjectTarget(s)}
@@ -148,58 +247,87 @@ export default function ClassesSubjectsPage() {
             </div>
           )}
         </Card>
-
-        <Card className="lg:col-span-2">
-          <div className="flex items-start gap-3 p-5">
-            <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
-            <div>
-              <p className="text-sm font-medium text-[var(--text)]">Getting started</p>
-              <ol className="mt-2 space-y-1 text-xs text-[var(--text-faint)] list-decimal list-inside">
-                <li>Create your classes first (e.g., &quot;Grade 5 A&quot;, &quot;Grade 6 B&quot;).</li>
-                <li>Add subjects (e.g., Maths, English, Science).</li>
-                <li>Go to Students and add students to each class.</li>
-                <li>Fee records are generated automatically each month for active students — no manual step required.</li>
-              </ol>
-            </div>
-          </div>
-        </Card>
       </div>
 
-      {deleteClassTarget && (
-        <Modal open onClose={() => setDeleteClassTarget(null)} title="Delete class">
-          <p className="text-sm text-[var(--text-dim)]">
-            {classHasRecords(deleteClassTarget.id) ? (
-              <>
-                <strong className="text-[var(--text)]">{classLabel(deleteClassTarget.name, deleteClassTarget.section)}</strong>{" "}
-                has students, attendance, fee, or test records attached. Deleting it will remove access to that
-                historical data. Are you sure?
-              </>
-            ) : (
-              <>
-                Delete <strong className="text-[var(--text)]">{classLabel(deleteClassTarget.name, deleteClassTarget.section)}</strong>?
-                This class has no records attached.
-              </>
+      {/* Delete class confirmation */}
+      <Modal
+        open={!!deleteClassTarget}
+        onClose={() => setDeleteClassTarget(null)}
+        title="Delete class"
+      >
+        <div className="space-y-4">
+          {deleteClassTarget && classHasRecords(deleteClassTarget.id) ? (
+            <p className="text-sm text-[var(--text-dim)]">
+              <strong>
+                {classLabel(deleteClassTarget.name, deleteClassTarget.section)}
+              </strong>{" "}
+              has students, attendance, or tests linked to it. Remove those
+              first before deleting the class.
+            </p>
+          ) : (
+            <p className="text-sm text-[var(--text-dim)]">
+              Delete{" "}
+              <strong>
+                {deleteClassTarget &&
+                  classLabel(deleteClassTarget.name, deleteClassTarget.section)}
+              </strong>
+              ? This cannot be undone.
+            </p>
+          )}
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setDeleteClassTarget(null)}
+            >
+              Cancel
+            </Button>
+            {deleteClassTarget && !classHasRecords(deleteClassTarget.id) && (
+              <Button variant="danger" size="sm" onClick={confirmDeleteClass}>
+                Delete
+              </Button>
             )}
-          </p>
-          <div className="mt-5 flex justify-end gap-2">
-            <Button variant="ghost" onClick={() => setDeleteClassTarget(null)}>Cancel</Button>
-            <Button variant="danger" onClick={confirmDeleteClass}>Delete</Button>
           </div>
-        </Modal>
-      )}
+        </div>
+      </Modal>
 
-      {deleteSubjectTarget && (
-        <Modal open onClose={() => setDeleteSubjectTarget(null)} title="Delete subject">
+      {/* Delete subject confirmation */}
+      <Modal
+        open={!!deleteSubjectTarget}
+        onClose={() => setDeleteSubjectTarget(null)}
+        title="Delete subject"
+      >
+        <div className="space-y-4">
           <p className="text-sm text-[var(--text-dim)]">
-            Delete <strong className="text-[var(--text)]">{deleteSubjectTarget.name}</strong>? This may affect
-            existing tests that reference this subject.
+            Delete <strong>{deleteSubjectTarget?.name}</strong>? This cannot be
+            undone.
           </p>
-          <div className="mt-5 flex justify-end gap-2">
-            <Button variant="ghost" onClick={() => setDeleteSubjectTarget(null)}>Cancel</Button>
-            <Button variant="danger" onClick={confirmDeleteSubject}>Delete</Button>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setDeleteSubjectTarget(null)}
+            >
+              Cancel
+            </Button>
+            <Button variant="danger" size="sm" onClick={confirmDeleteSubject}>
+              Delete
+            </Button>
           </div>
-        </Modal>
-      )}
+        </div>
+      </Modal>
+
+      <div className="mx-auto max-w-xl px-4 pb-8 sm:px-6 lg:px-8">
+        <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-4">
+          <div className="flex items-start gap-2.5">
+            <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-[var(--text-faint)]" />
+            <p className="text-xs text-[var(--text-faint)]">
+              Classes and subjects added here are immediately available in
+              Students, Attendance, Fees, and Tests.
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
