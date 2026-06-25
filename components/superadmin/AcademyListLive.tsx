@@ -14,6 +14,15 @@ import {
   Building2,
 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
+import {
+  fetchAcademies,
+  createAcademy,
+  updateAcademy,
+  updateAcademyPasswords,
+  deleteAcademy,
+  fetchAcademyMetrics,
+} from "@/lib/api/academies";
+import type { Academy, AcademyMetrics, AcademyStatus } from "@/types";
 import { Button } from "@/components/ui/Button";
 import { Input, Select } from "@/components/ui/Input";
 import { KebabMenu } from "@/components/ui/KebabMenu";
@@ -49,24 +58,28 @@ export function AcademyListLive({ title }: { title?: string }) {
   const [adminsTarget, setAdminsTarget] = useState<Academy | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Academy | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
-
+const [metrics, setMetrics] = useState<Record<string, AcademyMetrics>>({});
   const toast = (msg: string) => {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(null), 3000);
   };
 
-  const load = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await fetchAcademies();
-      setAcademies(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load academies");
-    } finally {
-      setLoading(false);
-    }
-  };
+const load = async () => {
+  setLoading(true);
+  setError(null);
+  try {
+    const [data, metricsData] = await Promise.all([
+      fetchAcademies(),
+      fetchAcademyMetrics(),
+    ]);
+    setAcademies(data);
+    setMetrics(metricsData);
+  } catch (err) {
+    setError(err instanceof Error ? err.message : "Failed to load academies");
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     load();
@@ -250,11 +263,17 @@ export function AcademyListLive({ title }: { title?: string }) {
                 >
                   <div className="flex items-center gap-1.5 text-xs text-[var(--text-dim)]">
                     <GraduationCap className="h-3.5 w-3.5 text-[var(--text-faint)]" />
-                    — students
+                    {metrics[academy.id]?.activeStudents ?? 0} students
                   </div>
                   <div className="flex items-center gap-1.5 text-xs text-[var(--text-dim)]">
-                    <Users className="h-3.5 w-3.5 text-[var(--text-faint)]" />2
-                    staff
+                    <Users className="h-3.5 w-3.5 text-[var(--text-faint)]" />
+                    {metrics[academy.id]?.staffCount ?? 0} staff
+                  </div>
+                  <div className="text-xs">
+                    <span className="text-[var(--text-faint)]">Revenue </span>
+                    <span className="font-medium text-[var(--text)]">
+                      {formatPKR(metrics[academy.id]?.revenueThisMonth ?? 0)}
+                    </span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Button
