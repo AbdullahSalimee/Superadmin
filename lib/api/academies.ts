@@ -1,4 +1,4 @@
-import type { Academy } from "@/types";
+﻿import type { Academy, AcademyMetrics } from "@/types";
 
 export async function fetchAcademies(): Promise<Academy[]> {
   const res = await fetch("/api/academies");
@@ -22,11 +22,9 @@ export async function createAcademy(
 
 export async function updateAcademy(
   id: string,
-  updates: Partial<
-    Pick<Academy, "name" | "status" | "contactName" | "contactPhone">
-  >,
+  updates: Partial<Pick<Academy, "name" | "status" | "contactName" | "contactPhone">>,
 ): Promise<void> {
-  const res = await fetch(`/api/academies/${id}`, {
+  const res = await fetch("/api/academies/" + id, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(updates),
@@ -39,7 +37,7 @@ export async function updateAcademyPasswords(
   id: string,
   updates: { adminPassword?: string; teacherPassword?: string },
 ): Promise<void> {
-  const res = await fetch(`/api/academies/${id}`, {
+  const res = await fetch("/api/academies/" + id, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(updates),
@@ -49,7 +47,14 @@ export async function updateAcademyPasswords(
 }
 
 export async function deleteAcademy(id: string): Promise<void> {
-  const res = await fetch(`/api/academies/${id}`, { method: "DELETE" });
+  const res = await fetch("/api/academies/" + id, { method: "DELETE" });
   if (!res.ok)
     throw new Error((await res.json()).error ?? "Failed to delete academy");
+}
+
+export async function fetchAcademyMetrics(): Promise<Record<string, AcademyMetrics>> {
+  const res = await fetch("/api/academies/metrics");
+  if (!res.ok)
+    throw new Error((await res.json()).error ?? "Failed to fetch metrics");
+  return res.json();
 }

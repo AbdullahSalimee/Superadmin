@@ -22,7 +22,7 @@ export async function createAcademy(
 
 export async function updateAcademy(
   id: string,
- updates: Partial
+  updates: Partial
     Pick<Academy, "name" | "status" | "contactName" | "contactPhone">
   >,
 ): Promise<void> {
